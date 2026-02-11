@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+            <h1
+                style="font-size: 2.2rem; margin-bottom: 0.5rem; background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                AttendanceML</h1>
+            <p style="color: var(--text-secondary); font-size: 1.1rem;">
+                {{ 'Welcome back, Faculty.' if mode == 'login' else 'Join the future of monitoring.' }}
+            </p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for message in messages %}
+            <p class="flash">{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') if mode == 'login' else url_for('auth.signup') }}">
+            {% if mode == 'signup' %}
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" placeholder="John Doe" required>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="faculty@university.edu" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-primary">
+                {{ 'Login to Dashboard' if mode == 'login' else 'Create Account' }}
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            {% if mode == 'login' %}
+            <p>New Faculty? <a href="{{ url_for('auth.signup') }}">Create an account</a></p>
+            {% else %}
+            <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Report - {{ classroom.name }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 2rem;
+            background: white;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-low {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-med {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-high {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+
+            body {
+                padding: 0;
+            }
+
+            table {
+                page-break-inside: auto;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+        }
+
+        .btn-print {
+            padding: 0.75rem 1.5rem;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-print:hover {
+            background-color: #2563eb;
+        }
+
+        .back-link {
+            text-decoration: none;
+            color: #64748b;
+            margin-right: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="no-print" style="margin-bottom: 20px;">
+        <a href="{{ url_for('main.class_analysis', class_id=classroom.id) }}" class="back-link">&larr; Back to
+            Analysis</a>
+        <button onclick="window.print()" class="btn-print">Print Report</button>
+    </div>
+
+    <div class="header">
+        <h1>Attendance Report</h1>
+        <h2>{{ classroom.name }}</h2>
+        <p>Generated on {{ generation_date }}</p>
+    </div>
+
+    <div class="meta-info">
+        <div>
+            <strong>Faculty:</strong> {{ classroom.faculty.name }}<br>
+            <strong>Total Students:</strong> {{ total_students }}
+        </div>
+        <div>
+            <strong>Total Sessions:</strong> {{ total_sessions }}<br>
+            <strong>Average Attendance:</strong> {{ avg_attendance }}%
+        </div>
+    </div>
+
+    <h3>Student Performance</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Roll Number</th>
+                <th>Name</th>
+                <th>Sessions Attended</th>
+                <th>Attendance %</th>
+                <th>Risk Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students_data %}
+            <tr>
+                <td>{{ student.roll_number }}</td>
+                <td>{{ student.name }}</td>
+                <td>{{ student.present_count }} / {{ total_sessions }}</td>
+                <td>{{ student.percentage }}%</td>
+                <td>
+                    <span class="status-badge 
+                        {% if student.risk == 'High' %}status-low
+                        {% elif student.risk == 'Medium' %}status-med
+                        {% else %}status-high{% endif %}">
+                        {{ student.risk }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>Session History</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Session</th>
+                <th>Total Present</th>
+                <th>Attendance Rate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for session in sessions_data %}
+            <tr>
+                <td>{{ session.date }}</td>
+                <td>{{ session.name }}</td>
+                <td>{{ session.present_count }} / {{ total_students }}</td>
+                <td>{{ session.rate }}%</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center;">No sessions recorded execution.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>

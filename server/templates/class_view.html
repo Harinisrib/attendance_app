@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block sidebar %}
+<aside class="sidebar">
+    <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+        </svg>
+        AttendanceML
+    </div>
+
+    <ul class="nav-links">
+        <li class="nav-item">
+            <a href="{{ url_for('main.dashboard') }}">
+                <span>&larr;</span> Back to All Classes
+            </a>
+        </li>
+        <li
+            style="margin-top: 1rem; padding-left: 1rem; color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+            Class Menu
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('main.class_view', class_id=classroom.id) }}" class="active">
+                <span>👥</span> Students
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ url_for('main.class_analysis', class_id=classroom.id) }}">
+                <span>📈</span> Analysis
+            </a>
+        </li>
+    </ul>
+
+    <div class="user-profile">
+        <div class="user-avatar">{{ current_user.name[0] | upper }}</div>
+        <div style="flex: 1; overflow: hidden;">
+            <p style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ current_user.name }}
+            </p>
+            <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                Current Class: <br>
+                <strong style="color: var(--text-primary);">{{ classroom.name }}</strong>
+            </div>
+        </div>
+    </div>
+</aside>
+{% endblock %}
+
+{% block content %}
+<div class="class-container" style="padding: 2rem; width: 100%;">
+    <header style="margin-bottom: 2rem;">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.2;">{{
+                    classroom.name }}</h1>
+                <p style="color: var(--text-secondary); font-size: 1.1rem;">Manage Students</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <button onclick="document.getElementById('addStudentModal').style.display='flex'" class="btn-primary"
+                    style="width: auto; padding: 0.85rem 1.75rem; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                    + Add Student
+                </button>
+                <a href="{{ url_for('main.mark_attendance', class_id=classroom.id) }}" class="glass"
+                    style="padding: 0.85rem 1.75rem; color: var(--text-primary); text-decoration: none; background: rgba(255,255,255,0.08); display: inline-block; font-weight: 500; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s;">
+                    Mark Attendance
+                </a>
+            </div>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for message in messages %}
+        <p class="flash">{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="glass" style="overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background: rgba(255,255,255,0.05); border-bottom: var(--glass-border);">
+                    <th style="padding: 1rem; font-weight: 500; color: var(--text-secondary);">Roll Number</th>
+                    <th style="padding: 1rem; font-weight: 500; color: var(--text-secondary);">Student Name</th>
+                    <th style="padding: 1rem; font-weight: 500; color: var(--text-secondary);">Risk Level</th>
+                    <th style="padding: 1rem; font-weight: 500; color: var(--text-secondary);">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in classroom.students %}
+                <tr style="border-bottom: var(--glass-border);">
+                    <td style="padding: 1rem;">{{ student.roll_number }}</td>
+                    <td style="padding: 1rem; font-weight: 500;">
+                        <a href="{{ url_for('main.student_analysis', student_id=student.id) }}"
+                            style="color: white; text-decoration: none; border-bottom: 1px dashed var(--text-secondary);">
+                            {{ student.name }}
+                        </a>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <span style="
+                            padding: 0.25rem 0.75rem; 
+                            border-radius: 999px; 
+                            font-size: 0.85rem;
+                            {% if student.risk_level == 'High' %} background: rgba(239, 68, 68, 0.2); color: #fca5a5;
+                            {% elif student.risk_level == 'Medium' %} background: rgba(234, 179, 8, 0.2); color: #fde047;
+                            {% else %} background: rgba(34, 197, 94, 0.2); color: #86efac; {% endif %}
+                        ">
+                            {{ student.risk_level }}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <form
+                            action="{{ url_for('main.delete_student', class_id=classroom.id, student_id=student.id) }}"
+                            method="POST" onsubmit="return confirm('Remove this student?');" style="display: inline;">
+                            <button type="submit"
+                                style="background: none; border: none; color: var(--error-color); cursor: pointer; transition: color 0.2s;">
+                                Remove
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No students
+                        added yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Student Modal -->
+<div id="addStudentModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+    <div class="glass" style="background: #0f172a; padding: 2rem; width: 100%; max-width: 400px;">
+        <h2 style="margin-bottom: 1.5rem;">Add New Student</h2>
+        <form action="{{ url_for('main.add_student', class_id=classroom.id) }}" method="POST">
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" name="name" placeholder="John Doe" required>
+            </div>
+            <div class="form-group">
+                <label for="roll_number">Roll Number</label>
+                <input type="text" name="roll_number" placeholder="e.g. 2023-CS-001" required>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="button" onclick="document.getElementById('addStudentModal').style.display='none'"
+                    style="flex: 1; padding: 0.75rem; background: transparent; border: 1px solid var(--text-secondary); color: var(--text-primary); border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button type="submit" class="btn-primary" style="flex: 1;">Add Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

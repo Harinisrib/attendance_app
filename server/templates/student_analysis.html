@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <a href="{{ url_for('main.class_view', class_id=student.classroom.id) }}"
+                style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">&larr; Back to Class</a>
+            <h1 style="font-size: 2rem; font-weight: 600; margin-top: 0.5rem;">{{ student.name }}</h1>
+            <p style="color: var(--text-secondary);">Roll Number: {{ student.roll_number }}</p>
+        </div>
+        <div class="status-badge 
+            {% if metrics.consistency >= 80 %}status-high{% elif metrics.consistency >= 50 %}status-med{% else %}status-low{% endif %}"
+            style="font-size: 1rem; padding: 0.5rem 1rem;">
+            {{ student.risk_level }} Risk
+        </div>
+    </header>
+
+    <!-- Metrics Cards -->
+    <div class="dashboard-grid metrics-row" style="margin-bottom: 2rem;">
+        <div class="metric-card blue">
+            <div class="metric-title">🔥 Current Streak</div>
+            <div class="metric-value">{{ metrics.streak }} <span style="font-size: 1rem; opacity: 0.8;">Sessions</span>
+            </div>
+            <div class="metric-subtitle">Consecutive Present</div>
+        </div>
+        <div class="metric-card green">
+            <div class="metric-title">🎯 Consistency Score</div>
+            <div class="metric-value">{{ metrics.consistency }}<span style="font-size: 1rem;">/100</span></div>
+            <div class="metric-subtitle">Reliability Metric</div>
+        </div>
+        <div class="metric-card orange">
+            <div class="metric-title">📊 Attendance Rate</div>
+            <div class="metric-value">{{ metrics.attendance_pct }}%</div>
+            <div class="metric-subtitle">{{ metrics.present_sessions }} / {{ metrics.total_sessions }} Sessions</div>
+        </div>
+    </div>
+
+    <!-- Heatmap Section -->
+    <div class="glass" style="padding: 2rem;">
+        <div class="section-header">Attendance Heatmap</div>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Visualizing attendance patterns over time.
+        </p>
+
+        <div class="heatmap-grid">
+            {% for date, status in metrics.heatmap.items() %}
+            <div class="heatmap-cell {{ status|lower }}" title="{{ date }}: {{ status }}">
+                <span class="tooltip">{{ date }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="legend"
+            style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end; font-size: 0.85rem; color: var(--text-secondary);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="heatmap-cell present" style="width: 12px; height: 12px;"></div> Present
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="heatmap-cell mixed" style="width: 12px; height: 12px;"></div> Mixed
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div class="heatmap-cell absent" style="width: 12px; height: 12px;"></div> Absent
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .heatmap-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .heatmap-cell {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 6px;
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .heatmap-cell:hover {
+        transform: scale(1.1);
+        z-index: 10;
+    }
+
+    .heatmap-cell .tooltip {
+        visibility: hidden;
+        background-color: #1e293b;
+        color: #fff;
+        text-align: center;
+        padding: 5px 8px;
+        border-radius: 6px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    .heatmap-cell:hover .tooltip {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .heatmap-cell.present {
+        background-color: #22c55e;
+    }
+
+    .heatmap-cell.mixed {
+        background-color: #f59e0b;
+    }
+
+    .heatmap-cell.absent {
+        background-color: #ef4444;
+    }
+
+    /* Metrics override for 3 columns */
+    .metrics-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 768px) {
+        .metrics-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
