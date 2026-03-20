@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
-from extensions import db
+from flask import current_app
+from flask_mail import Message
+from extensions import db, mail
+import threading
 
 class MLEngine:
     def update_student_risk(self, student):
@@ -9,28 +12,93 @@ class MLEngine:
         """
         history = student.attendances
         
-        if not history:
-            student.risk_level = 'Low' # Default to Low if no data
+        from models import LeaveRequest
+        approved_leaves = LeaveRequest.query.filter_by(student_id=student.id, status='Approved').all()
+        
+        def is_on_leave(date_obj):
+            for leave in approved_leaves:
+                if leave.start_date <= date_obj <= leave.end_date:
+                    return True
+            return False
+
+        relevant_history = [a for a in history if not is_on_leave(a.date)]
+        
+        if not relevant_history:
+            student.risk_level = 'Low'
             return
         
-        total_sessions = len(history)
-        present_sessions = sum(1 for a in history if a.is_present)
+        total_sessions = len(relevant_history)
+        present_sessions = sum(1 for a in relevant_history if a.is_present)
+        late_sessions = sum(1 for a in relevant_history if a.is_present and a.status == 'Late')
         
-        if total_sessions == 0:
-            attendance_percentage = 100
-        else:
-            attendance_percentage = (present_sessions / total_sessions) * 100
+        # Heuristic: 3 Lates count as 1 Absent for risk calculation
+        adjusted_present = present_sessions - (late_sessions // 3)
+        attendance_percentage = (adjusted_present / total_sessions) * 100
         
         # Rule-based classification
+        new_risk = 'Low'
         if attendance_percentage < 60:
-            student.risk_level = 'High'
+            new_risk = 'High'
         elif attendance_percentage < 75:
-            student.risk_level = 'Medium'
-        else:
-            student.risk_level = 'Low'
+            new_risk = 'Medium'
+            
+        old_risk = student.risk_level
+        student.risk_level = new_risk
+
+        if new_risk == 'High' and old_risk != 'High':
+            self.send_risk_alert_email(student, attendance_percentage)
             
         # Note: commit should be handled by caller or here if standalone
         # db.session.add(student) # Already in session
+
+    def send_async_email(self, app, msg):
+        with app.app_context():
+            try:
+                mail.send(msg)
+                print(f"Async email sent to {msg.recipients[0]}")
+            except Exception as e:
+                print(f"Failed to send email to {msg.recipients[0]}: {e}")
+
+    def send_risk_alert_email(self, student, attendance_percentage):
+        if not student.email: return
+        
+        app = current_app._get_current_object()
+        msg = Message(
+            subject=f"URGENT: High Risk Attendance Alert for {student.name}",
+            recipients=[student.email]
+        )
+        msg.body = f"""Dear {student.name},
+
+You are receiving this automated alert because your attendance has dropped to {attendance_percentage:.1f}%.
+This places you in the HIGH RISK category for this class. 
+
+Please contact your faculty instructor immediately to discuss your attendance standing.
+
+Regards,
+Attendance Tracking System
+"""
+        thr = threading.Thread(target=self.send_async_email, args=[app, msg])
+        thr.start()
+
+    def send_absence_notification(self, student, date_obj, session_name):
+        if not student.email: return
+        
+        app = current_app._get_current_object()
+        msg = Message(
+            subject=f"Update: Absence Recorded - {date_obj.strftime('%b %d')}",
+            recipients=[student.email]
+        )
+        msg.body = f"""Dear {student.name},
+
+This is an automated notification to inform you that you have been marked ABSENT for the {session_name} session on {date_obj.strftime('%A, %b %d, %Y')}.
+
+If you believe this is an error, please contact your faculty instructor.
+
+Regards,
+Attendance Tracking System
+"""
+        thr = threading.Thread(target=self.send_async_email, args=[app, msg])
+        thr.start()
 
     def get_class_analytics(self, classroom):
         """
@@ -67,7 +135,18 @@ class MLEngine:
         """
         history = sorted(student.attendances, key=lambda x: (x.date, x.session))
         
-        if not history:
+        from models import LeaveRequest
+        approved_leaves = LeaveRequest.query.filter_by(student_id=student.id, status='Approved').all()
+        
+        def is_on_leave(date_obj):
+            for leave in approved_leaves:
+                if leave.start_date <= date_obj <= leave.end_date:
+                    return True
+            return False
+
+        relevant_history = [a for a in history if not is_on_leave(a.date)]
+        
+        if not relevant_history:
             return {
                 'streak': 0,
                 'consistency': 0,
@@ -79,8 +158,8 @@ class MLEngine:
             
         # 1. Calculate Streak
         streak = 0
-        # Iterate backwards
-        for att in reversed(history):
+        # Iterate backwards through relevant history
+        for att in reversed(relevant_history):
             if att.is_present:
                 streak += 1
             else:
@@ -89,6 +168,9 @@ class MLEngine:
         # 2. Key Stats
         total_sessions = len(history)
         present_sessions = sum(1 for a in history if a.is_present)
+        late_sessions = sum(1 for a in history if a.is_present and a.status == 'Late')
+        
+        # Pct based on raw presence
         pct = (present_sessions / total_sessions * 100) if total_sessions > 0 else 0
         
         # 3. Consistency Score (Simple heuristic: higher % + recent streak bonus)
@@ -115,12 +197,16 @@ class MLEngine:
             
         final_heatmap = {}
         for d, statuses in heatmap.items():
-            if all(statuses):
-                final_heatmap[d] = 'Present'
-            elif not any(statuses):
+            # statuses is a list of bools. We need status too.
+            # Let's adjust this to use the actual status if multiple sessions.
+            # For simplicity: any Absent -> Absent. Any Late (with no Absent) -> Late. Else Present.
+            day_atts = [a for a in history if a.date.strftime('%Y-%m-%d') == d]
+            if any(not a.is_present for a in day_atts):
                 final_heatmap[d] = 'Absent'
+            elif any(a.status == 'Late' for a in day_atts):
+                final_heatmap[d] = 'Late'
             else:
-                final_heatmap[d] = 'Mixed'
+                final_heatmap[d] = 'Present'
                 
         return {
             'streak': streak,
@@ -128,6 +214,7 @@ class MLEngine:
             'attendance_pct': round(pct, 1),
             'total_sessions': total_sessions,
             'present_sessions': present_sessions,
+            'late_sessions': late_sessions,
             'heatmap': final_heatmap
         }
 

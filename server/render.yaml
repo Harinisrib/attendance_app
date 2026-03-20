@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: attendance-ml
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn "app:create_app()" -b 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_APP
+        value: app
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URI
+        value: sqlite:////data/attendance.db
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1

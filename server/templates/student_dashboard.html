@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+            <h1>Welcome, {{ student.name }}</h1>
+            <p>Roll Number: {{ student.roll_number }} • Attendance Overview</p>
+        </div>
+        <a href="{{ url_for('main.student_leave') }}" class="btn btn-secondary">
+            <span>📝</span> Request Leave
+        </a>
+    </div>
+</div>
+
+<div class="stats-grid animate-fade" style="animation-delay: 0.1s;">
+    <div class="stat-card">
+        <div class="stat-value text-success">{{ attendance_pct }}%</div>
+        <div class="stat-label">Success Rate</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ total_sessions }}</div>
+        <div class="stat-label">Total Slots</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" style="color: var(--accent-primary)">{{ present_count }}</div>
+        <div class="stat-label">Verified Present</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value text-error">{{ absent_count }}</div>
+        <div class="stat-label">Missed Sessions</div>
+    </div>
+</div>
+
+<div class="glass-card animate-fade" style="margin-top: 2rem; animation-delay: 0.2s;">
+    <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;">
+        <span>📈</span> Attendance Performance Trend
+    </h3>
+    <div class="chart-container">
+        <canvas id="attendanceChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+
+    // Gradient for the chart
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
+    gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ (labels or []) | tojson }},
+            datasets: [{
+                label: 'Status',
+                data: {{ (data or []) | tojson }},
+        borderColor: '#6366f1',
+        borderWidth: 3,
+        pointBackgroundColor: '#6366f1',
+        pointBorderColor: 'rgba(255, 255, 255, 0.5)',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        backgroundColor: gradient,
+        fill: true,
+        stepped: true,
+        tension: 0
+            }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 1.2,
+                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                ticks: {
+                    color: '#9ca3af',
+                    stepSize: 1,
+                    callback: function (value) {
+                        if (value === 1) return 'PRESENT';
+                        if (value === 0) return 'ABSENT';
+                        return '';
+                    }
+                }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: '#9ca3af' }
+            }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                titleColor: '#fff',
+                bodyColor: '#fff',
+                padding: 12,
+                borderRadius: 8,
+                displayColors: false
+            }
+        }
+    }
+    });
+</script>
+{% endblock %}

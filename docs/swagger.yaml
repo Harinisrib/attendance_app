@@ -1,0 +1,85 @@
+openapi: 3.0.0
+info:
+  title: AttendSmart API
+  description: API documentation for the ML-based Attendance Management System. Note that the application primarily uses Jinja2 Server-Side rendering, but these internal endpoints map the core functionality.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+paths:
+  /login:
+    get:
+      summary: Render Login Page
+      responses:
+        '200':
+          description: Successful render
+    post:
+      summary: Authenticate User
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '302':
+          description: Redirect to dashboard on success, back to login on failure.
+  /dashboard:
+    get:
+      summary: Get Faculty Dashboard
+      description: Returns the faculty dashboard with their classrooms.
+      responses:
+        '200':
+          description: A successful response.
+        '401':
+          description: Unauthorized.
+  /class/{class_id}:
+    get:
+      summary: Get Classroom Details
+      parameters:
+        - in: path
+          name: class_id
+          required: true
+          schema:
+             type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns paginated student roster.
+  /class/{class_id}/mark_attendance:
+    post:
+      summary: Mark Bulk Attendance
+      parameters:
+        - in: path
+          name: class_id
+          required: true
+          schema:
+             type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '302':
+          description: Redirects back to class view on success.
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session

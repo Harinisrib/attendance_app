@@ -1,137 +1,80 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="dashboard-container">
-    <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+<div class="dashboard-header animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <a href="{{ url_for('main.class_view', class_id=student.classroom.id) }}"
-                style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">&larr; Back to Class</a>
-            <h1 style="font-size: 2rem; font-weight: 600; margin-top: 0.5rem;">{{ student.name }}</h1>
-            <p style="color: var(--text-secondary);">Roll Number: {{ student.roll_number }}</p>
-        </div>
-        <div class="status-badge 
-            {% if metrics.consistency >= 80 %}status-high{% elif metrics.consistency >= 50 %}status-med{% else %}status-low{% endif %}"
-            style="font-size: 1rem; padding: 0.5rem 1rem;">
-            {{ student.risk_level }} Risk
-        </div>
-    </header>
-
-    <!-- Metrics Cards -->
-    <div class="dashboard-grid metrics-row" style="margin-bottom: 2rem;">
-        <div class="metric-card blue">
-            <div class="metric-title">🔥 Current Streak</div>
-            <div class="metric-value">{{ metrics.streak }} <span style="font-size: 1rem; opacity: 0.8;">Sessions</span>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                <a href="{{ url_for('main.class_view', class_id=student.classroom.id) }}"
+                    style="color: var(--accent-primary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">{{
+                    student.classroom.name }}</a>
+                <span style="color: var(--text-secondary);">/</span>
+                <span style="color: var(--text-secondary); font-size: 0.9rem;">Student Profile</span>
             </div>
-            <div class="metric-subtitle">Consecutive Present</div>
+            <h1>{{ student.name }}</h1>
+            <p>Analytical performance report for roll: <strong>{{ student.roll_number }}</strong></p>
         </div>
-        <div class="metric-card green">
-            <div class="metric-title">🎯 Consistency Score</div>
-            <div class="metric-value">{{ metrics.consistency }}<span style="font-size: 1rem;">/100</span></div>
-            <div class="metric-subtitle">Reliability Metric</div>
-        </div>
-        <div class="metric-card orange">
-            <div class="metric-title">📊 Attendance Rate</div>
-            <div class="metric-value">{{ metrics.attendance_pct }}%</div>
-            <div class="metric-subtitle">{{ metrics.present_sessions }} / {{ metrics.total_sessions }} Sessions</div>
-        </div>
-    </div>
-
-    <!-- Heatmap Section -->
-    <div class="glass" style="padding: 2rem;">
-        <div class="section-header">Attendance Heatmap</div>
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-            Visualizing attendance patterns over time.
-        </p>
-
-        <div class="heatmap-grid">
-            {% for date, status in metrics.heatmap.items() %}
-            <div class="heatmap-cell {{ status|lower }}" title="{{ date }}: {{ status }}">
-                <span class="tooltip">{{ date }}</span>
-            </div>
-            {% endfor %}
-        </div>
-
-        <div class="legend"
-            style="display: flex; gap: 1rem; margin-top: 1.5rem; justify-content: flex-end; font-size: 0.85rem; color: var(--text-secondary);">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div class="heatmap-cell present" style="width: 12px; height: 12px;"></div> Present
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div class="heatmap-cell mixed" style="width: 12px; height: 12px;"></div> Mixed
-            </div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <div class="heatmap-cell absent" style="width: 12px; height: 12px;"></div> Absent
-            </div>
+        <div>
+            {% if metrics.consistency >= 80 %}
+            <span class="status-badge status-low">🛡️ OPTIMAL STANDING</span>
+            {% elif metrics.consistency >= 50 %}
+            <span class="status-badge status-medium">⚡ MODERATE RISK</span>
+            {% else %}
+            <span class="status-badge status-high">⚠️ HIGH ATTENTION</span>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<style>
-    .heatmap-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-        gap: 0.5rem;
-    }
+<div class="stats-grid animate-fade" style="margin-bottom: 2rem; animation-delay: 0.1s;">
+    <div class="stat-card">
+        <div class="stat-value">{{ metrics.streak }} <span style="font-size: 1rem; opacity: 0.7;">Days</span></div>
+        <div class="stat-label">🔥 Current Streak</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ metrics.consistency }}<span style="font-size: 1rem;">/100</span></div>
+        <div class="stat-label">🎯 Consistency Score</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ metrics.attendance_pct }}%</div>
+        <div class="stat-label">📊 Attendance Rate</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ metrics.present_sessions }} <span style="font-size: 1rem; opacity: 0.7;">/ {{
+                metrics.total_sessions }}</span></div>
+        <div class="stat-label">Sessions Present</div>
+    </div>
+</div>
 
-    .heatmap-cell {
-        width: 100%;
-        aspect-ratio: 1;
-        border-radius: 6px;
-        position: relative;
-        cursor: pointer;
-        transition: transform 0.2s;
-    }
+<div class="glass-card animate-fade" style="animation-delay: 0.2s;">
+    <div style="margin-bottom: 2rem;">
+        <h2 style="font-weight: 800; letter-spacing: -0.02em;">Attendance Heatmap</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">Visual tracking of presence patterns over the last
+            session cycle.</p>
+    </div>
 
-    .heatmap-cell:hover {
-        transform: scale(1.1);
-        z-index: 10;
-    }
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 8px;">
+        {% for date, status in metrics.heatmap.items() %}
+        <div style="aspect-ratio: 1; border-radius: 6px; position: relative; cursor: pointer; transition: transform 0.2s;
+            {% if status == 'Present' %} background: var(--success-color); box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+            {% elif status == 'Mixed' %} background: var(--warning-color); box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+            {% else %} background: var(--error-color); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); {% endif %}"
+            title="{{ date }}: {{ status }}" onmouseover="this.style.transform='scale(1.2)';"
+            onmouseout="this.style.transform='scale(1)';"></div>
+        {% endfor %}
+    </div>
 
-    .heatmap-cell .tooltip {
-        visibility: hidden;
-        background-color: #1e293b;
-        color: #fff;
-        text-align: center;
-        padding: 5px 8px;
-        border-radius: 6px;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.75rem;
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.3s;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }
-
-    .heatmap-cell:hover .tooltip {
-        visibility: visible;
-        opacity: 1;
-    }
-
-    .heatmap-cell.present {
-        background-color: #22c55e;
-    }
-
-    .heatmap-cell.mixed {
-        background-color: #f59e0b;
-    }
-
-    .heatmap-cell.absent {
-        background-color: #ef4444;
-    }
-
-    /* Metrics override for 3 columns */
-    .metrics-row {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    @media (max-width: 768px) {
-        .metrics-row {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
+    <div
+        style="display: flex; gap: 1.5rem; margin-top: 2rem; justify-content: flex-end; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 10px; height: 10px; border-radius: 2px; background: var(--success-color);"></div> Present
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 10px; height: 10px; border-radius: 2px; background: var(--warning-color);"></div> Mixed
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 10px; height: 10px; border-radius: 2px; background: var(--error-color);"></div> Absent
+        </div>
+    </div>
+</div>
 {% endblock %}

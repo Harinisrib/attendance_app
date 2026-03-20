@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                <a href="{{ url_for('main.dashboard') }}"
+                    style="color: var(--accent-primary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">Classes</a>
+                <span style="color: var(--text-secondary);">/</span>
+                <a href="{{ url_for('main.class_view', class_id=classroom.id) }}"
+                    style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">{{ classroom.name
+                    }}</a>
+                <span style="color: var(--text-secondary);">/</span>
+                <span style="color: var(--text-secondary); font-size: 0.9rem;">Attendance</span>
+            </div>
+            <h1>Attendance Grid</h1>
+            <p>Verification for <strong>{{ date_formatted }}</strong></p>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+            <form action="{{ url_for('main.daily_attendance', class_id=classroom.id) }}" method="GET"
+                style="display: flex; gap: 0.5rem; align-items: center;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">DATE:</label>
+                <input type="date" name="date" value="{{ date }}" class="form-input" onchange="this.form.submit()">
+                
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-left: 0.5rem;">SUBJECT:</label>
+                <select name="subject_id" class="form-input" onchange="this.form.submit()" style="min-width: 150px;">
+                    <option value="">-- General / None --</option>
+                    {% for sub in classroom.subjects %}
+                    <option value="{{ sub.id }}" {% if selected_subject_id == sub.id %}selected{% endif %}>{{ sub.name }}</option>
+                    {% endfor %}
+                </select>
+
+                {% if search_query %}
+                <input type="hidden" name="search" value="{{ search_query }}">
+                {% endif %}
+            </form>
+            {% if not holiday_event %}
+            <button onclick="document.forms['attendanceForm'].submit()" class="btn btn-primary" style="margin-left: auto;">
+                <span>💾</span> Save Changes
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="glass-card animate-fade" style="margin-bottom: 2rem; padding: 1rem; animation-delay: 0.1s;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px; position: relative;">
+            <form action="{{ url_for('main.daily_attendance', class_id=classroom.id) }}" method="GET">
+                <input type="hidden" name="date" value="{{ date }}">
+                <span
+                    style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); opacity: 0.5;">🔍</span>
+                <input type="text" name="search" value="{{ search_query }}"
+                    placeholder="Filter students by name or roll..." class="form-input"
+                    style="width: 100%; padding-left: 2.5rem;">
+            </form>
+        </div>
+        {% if not holiday_event %}
+        <div style="display: flex; gap: 0.75rem;">
+            <button onclick="document.getElementById('addSessionModal').style.display='flex'" class="btn btn-secondary">
+                <span>+</span> Add Session
+            </button>
+            <button onclick="openQRModal()" class="btn btn-secondary" style="background: rgba(99, 102, 241, 0.1); color: var(--accent-primary); border-color: rgba(99, 102, 241, 0.3);">
+                <span>📱</span> Show QR
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if holiday_event %}
+<div class="glass-card animate-fade" style="text-align: center; padding: 4rem 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); animation-delay: 0.2s;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+    <h2 style="font-size: 1.5rem; color: var(--accent-primary); margin-bottom: 0.5rem; font-weight: 700;">{{ holiday_event.name }}</h2>
+    <p style="color: var(--text-secondary); font-size: 1rem;">This date is marked as a university holiday. No attendance can be recorded.</p>
+</div>
+{% else %}
+<form id="attendanceForm" action="{{ url_for('main.daily_attendance', class_id=classroom.id, date=date) }}"
+    method="POST" class="animate-fade" style="animation-delay: 0.2s;">
+    <div class="glass-card" style="padding: 0; overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 120px;">Roll No</th>
+                    <th>Student Name</th>
+                    {% for session in classroom.sessions %}
+                    <th style="text-align: center; min-width: 120px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="font-size: 1.1rem; font-weight: 800; color: var(--accent-primary);">{{ session.name }}</span>
+                            {% if session.start_time %}
+                            <span style="font-size: 0.75rem; opacity: 0.7; font-weight: 600;">
+                                {{ session.start_time.strftime('%I:%M %p') }} - {{ session.end_time.strftime('%I:%M %p') if session.end_time else '...' }}
+                            </span>
+                            {% endif %}
+                            <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                <button type="button" class="btn btn-secondary rename-btn" data-id="{{ session.id }}"
+                                    data-name="{{ session.name | e }}"
+                                    data-start="{{ session.start_time.strftime('%H:%M') if session.start_time else '' }}"
+                                    data-end="{{ session.end_time.strftime('%H:%M') if session.end_time else '' }}"
+                                    style="padding: 4px 8px; font-size: 0.7rem;">✏️</button>
+                                <button type="button" class="btn btn-secondary delete-btn" data-id="{{ session.id }}"
+                                    data-name="{{ session.name | e }}"
+                                    style="padding: 4px 8px; font-size: 0.7rem; color: var(--error-color);">🗑️</button>
+                            </div>
+                        </div>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td><code style="font-size: 0.85rem; opacity: 0.7;">{{ student.roll_number }}</code></td>
+                    <td style="font-weight: 600;">{{ student.name }}</td>
+                    {% for session in classroom.sessions %}
+                    {% set att = att_map[student.id][session.name] %}
+                    <td style="text-align: center; {% if att.status == 'Late' %}background: rgba(251, 191, 36, 0.1);{% endif %}">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <input type="checkbox" name="att_{{ student.id }}_{{ session.id }}" {% if att.present %}checked{% endif %}
+                                style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-primary);">
+                            {% if att.status == 'Late' %}
+                            <span style="font-size: 0.65rem; font-weight: 800; color: #d97706; background: #fef3c7; padding: 2px 4px; border-radius: 4px;">LATE</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ 2 + classroom.sessions|length }}"
+                        style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                        No students found for "{{ search_query }}".
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+{% endif %}
+
+<!-- Add Session Modal -->
+<div id="addSessionModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; padding: 2rem;">
+    <div class="glass-card animate-fade" style="width: 100%; max-width: 400px; padding: 2.5rem;">
+        <h2 style="font-weight: 800; margin-bottom: 2rem; letter-spacing: -0.02em;">New Session</h2>
+        <form action="{{ url_for('main.add_session', class_id=classroom.id) }}" method="POST">
+            <div style="margin-bottom: 2rem;">
+                <label
+                    style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Session
+                    Label (e.g. I, II, III)</label>
+                <input type="text" name="session_name" class="form-input" style="width: 100%;"
+                    placeholder="Roman numeral or Name" required autofocus>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary);">START TIME</label>
+                    <input type="time" name="start_time" class="form-input" style="width: 100%;" required>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary);">END TIME</label>
+                    <input type="time" name="end_time" class="form-input" style="width: 100%;" required>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="document.getElementById('addSessionModal').style.display='none'"
+                    class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">Add
+                    Session</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Rename Modal -->
+<div id="renameSessionModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; padding: 2rem;">
+    <div class="glass-card animate-fade" style="width: 100%; max-width: 400px; padding: 2.5rem;">
+        <h2 style="font-weight: 800; margin-bottom: 2rem; letter-spacing: -0.02em;">Update Label</h2>
+        <form id="renameSessionForm" method="POST">
+            <div style="margin-bottom: 2rem;">
+                <label
+                    style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Name</label>
+                <input type="text" id="rename_session_name" name="session_name" class="form-input" style="width: 100%;"
+                    required autofocus>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary);">START TIME</label>
+                    <input type="time" id="rename_start_time" name="start_time" class="form-input" style="width: 100%;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary);">END TIME</label>
+                    <input type="time" id="rename_end_time" name="end_time" class="form-input" style="width: 100%;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="document.getElementById('renameSessionModal').style.display='none'"
+                    class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex: 1; justify-content: center;">Rename</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Show QR Modal -->
+<div id="showQRModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; padding: 2rem;">
+    <div class="glass-card animate-fade" style="width: 100%; max-width: 450px; padding: 2.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-weight: 800; letter-spacing: -0.02em;">Generate QR Code</h2>
+            <button onclick="document.getElementById('showQRModal').style.display='none'"
+                style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;">×</button>
+        </div>
+        
+        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Select one or more sessions to mark attendance for when this QR is scanned.</p>
+
+        <form action="{{ url_for('main.show_qr', class_id=classroom.id) }}" method="GET">
+            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="subject_id" value="{{ selected_subject_id or '' }}">
+            
+            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 2rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; background: rgba(0,0,0,0.2);">
+                {% for session in classroom.sessions %}
+                <label style="display: flex; align-items: center; gap: 10px; padding: 8px; cursor: pointer; border-radius: 6px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" name="sessions" value="{{ session.name }}" style="width: 18px; height: 18px; accent-color: var(--accent-primary);" checked>
+                    <span style="font-weight: 500;">{{ session.name }}</span>
+                </label>
+                {% else %}
+                <div style="color: var(--text-secondary); text-align: center; padding: 1rem;">No sessions defined.</div>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="document.getElementById('showQRModal').style.display='none'"
+                    class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex: 2; justify-content: center;">Generate QR</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.rename-btn').forEach(btn => {
+        btn.onclick = () => {
+            const id = btn.dataset.id;
+            const name = btn.dataset.name;
+            const start = btn.dataset.start;
+            const end = btn.dataset.end;
+            const modal = document.getElementById('renameSessionModal');
+            document.getElementById('rename_session_name').value = name;
+            document.getElementById('rename_start_time').value = start;
+            document.getElementById('rename_end_time').value = end;
+            document.getElementById('renameSessionForm').action = `/class/{{ classroom.id }}/rename_session/${id}`;
+            modal.style.display = 'flex';
+        };
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.onclick = () => {
+            const id = btn.dataset.id;
+            const name = btn.dataset.name;
+            if (confirm(`Remove session "${name}" and all its logs?`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/class/{{ classroom.id }}/delete_session/${id}`;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        };
+    });
+
+    function openQRModal() {
+        // Just show the modal; all checkboxes are default checked.
+        // It could be improved to check logic on the selected subjects.
+        document.getElementById('showQRModal').style.display = 'flex';
+    }
+</script>
+{% endblock %}

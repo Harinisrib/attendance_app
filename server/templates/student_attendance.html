@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header animate-fade">
+    <h1>My Attendance History</h1>
+    <p>Detailed log of your presence across all sessions</p>
+</div>
+
+<div class="glass-card animate-fade" style="margin-bottom: 2rem; animation-delay: 0.1s;">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 250px;">
+            <label style="color: var(--text-secondary); font-weight: 500;">Filter by Date:</label>
+            <input type="date" name="date" value="{{ date_query }}" class="form-input" style="flex: 1;">
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <button type="submit" class="btn btn-primary">Apply Filter</button>
+            {% if date_query %}
+            <a href="{{ url_for('main.student_attendance') }}" class="btn btn-secondary">Reset</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<div class="glass-card animate-fade" style="padding: 0; animation-delay: 0.2s;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Session Slot</th>
+                <th>Verification Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in attendances.items %}
+            <tr>
+                <td style="font-weight: 600;">{{ record.date.strftime('%b %d, %Y') }}</td>
+                <td>
+                    <span
+                        style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 0.85rem;">
+                        {{ record.session }}
+                    </span>
+                </td>
+                <td>
+                    {% if record.is_present %}
+                    <span class="status-badge status-low">✓ PRESENT</span>
+                    {% else %}
+                    <span class="status-badge status-high">✗ ABSENT</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="text-align: center; padding: 4rem; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                    <p>No attendance records found for the selected criteria.</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Pagination Controls -->
+    {% if attendances.pages > 1 %}
+    <div style="padding: 1.5rem; display: flex; justify-content: center; gap: 0.5rem; border-top: var(--glass-border);">
+        {% for p in attendances.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                {% if p == attendances.page %}
+                    <span class="btn btn-primary" style="padding: 6px 12px; min-width: 36px; text-align: center;">{{ p }}</span>
+                {% else %}
+                    <a href="{{ url_for('main.student_attendance', page=p, date=date_query) }}" class="btn btn-secondary" style="padding: 6px 12px; min-width: 36px; text-align: center;">{{ p }}</a>
+                {% endif %}
+            {% else %}
+                <span style="color: var(--text-secondary); padding: 6px;">...</span>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

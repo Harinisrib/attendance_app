@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1>Academic Calendar</h1>
+            <p>Manage holidays and scheduled university events.</p>
+        </div>
+        <button onclick="document.getElementById('addEventModal').style.display='flex'" class="btn btn-primary">
+            <span>+</span> Add Event
+        </button>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div class="animate-fade" style="margin-bottom: 2rem;">
+    {% for message in messages %}
+    <div style="padding: 1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; color: var(--accent-primary); font-weight: 500;">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="glass-card animate-fade" style="padding: 0; animation-delay: 0.1s;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th style="text-align: right;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td style="font-weight: 700;">{{ event.name }}</td>
+                <td>{{ event.date.strftime('%B %d, %Y') }}</td>
+                <td>
+                    {% if event.is_holiday %}
+                    <span class="status-badge status-high">Holiday</span>
+                    {% else %}
+                    <span class="status-badge status-low">Activity</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    <form action="{{ url_for('main.delete_calendar_event', event_id=event.id) }}" method="POST" onsubmit="return confirm('Remove this event?');">
+                        <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; color: var(--error-color);">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 4rem; color: var(--text-secondary);">The academic calendar is empty.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Event Modal -->
+<div id="addEventModal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; padding: 2rem;">
+    <div class="glass-card animate-fade" style="width: 100%; max-width: 400px; padding: 2.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-weight: 800; letter-spacing: -0.02em;">Add Event</h2>
+            <button onclick="document.getElementById('addEventModal').style.display='none'"
+                style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;">×</button>
+        </div>
+
+        <form method="POST">
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Event Name</label>
+                <input type="text" name="name" class="form-input" style="width: 100%;" placeholder="e.g. Winter Break" required>
+            </div>
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase;">Date</label>
+                <input type="date" name="date" class="form-input" style="width: 100%;" required>
+            </div>
+            <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" name="is_holiday" id="is_holiday" checked style="width: 18px; height: 18px; accent-color: var(--accent-primary);">
+                <label for="is_holiday" style="font-weight: 600; font-size: 0.9rem;">Mark as Public Holiday</label>
+            </div>
+
+            <div style="display: flex; gap: 1rem;">
+                <button type="button" onclick="document.getElementById('addEventModal').style.display='none'"
+                    class="btn btn-secondary" style="flex: 1; justify-content: center;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex: 2; justify-content: center;">Save Event</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -4,54 +4,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ML Attendance System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Google Fonts -->
+    <title>AttendSmart - Attendance Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4.1">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='app_icon_modern.png') }}">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #6366f1;
+            --accent-hover: #4f46e5;
+            --card-glass: rgba(30, 41, 59, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.1);
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="{{ 'auth-page' if not current_user.is_authenticated else '' }}">
     <div class="app-container">
         {% if current_user.is_authenticated %}
-        <!-- Sidebar -->
-        {% block sidebar %}
         <aside class="sidebar">
             <div class="brand">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                </svg>
-                AttendanceML
+                <div
+                    style="background: var(--accent-gradient); -webkit-background-clip: padding-box; background-clip: padding-box; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                    ⚡</div>
+                <span>AttendanceML</span>
             </div>
 
             <ul class="nav-links">
+                {% if current_user.is_faculty %}
                 <li class="nav-item">
                     <a href="{{ url_for('main.dashboard') }}"
                         class="{{ 'active' if request.endpoint == 'main.dashboard' }}">
-                        <span>📊</span> Dashboard
+                        <i>🏠</i> <span>Dashboard</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('main.dashboard_analysis') }}"
+                        class="{{ 'active' if request.endpoint == 'main.dashboard_analysis' }}">
+                        <i>📈</i> <span>Overall Analysis</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('main.academic_calendar') }}"
+                        class="{{ 'active' if request.endpoint == 'main.academic_calendar' }}">
+                        <i>📅</i> <span>Academic Calendar</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('main.faculty_leaves') }}"
+                        class="{{ 'active' if request.endpoint == 'main.faculty_leaves' }}">
+                        <i>📝</i> <span>Leave Applications</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a href="{{ url_for('main.student_dashboard') }}"
+                        class="{{ 'active' if request.endpoint == 'main.student_dashboard' }}">
+                        <i>📊</i> <span>My Stats</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('main.student_attendance') }}"
+                        class="{{ 'active' if request.endpoint == 'main.student_attendance' }}">
+                        <i>🗓️</i> <span>History</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('main.student_check_in') }}"
+                        class="{{ 'active' if request.endpoint == 'main.student_check_in' }}"
+                        style="color: var(--accent-primary);">
+                        <i>📱</i> <span>Smart Check-In</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('main.student_leave') }}"
+                        class="{{ 'active' if request.endpoint == 'main.student_leave' }}">
+                        <i>📝</i> <span>Request Leave</span>
+                    </a>
+                </li>
+                {% endif %}
             </ul>
 
             <div class="user-profile">
                 <div class="user-avatar">{{ current_user.name[0] | upper }}</div>
                 <div style="flex: 1; overflow: hidden;">
-                    <p style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{
-                        current_user.name }}</p>
-                    <a href="{{ url_for('auth.logout') }}"
-                        style="font-size: 0.8rem; color: var(--error-color); text-decoration: none;">Logout</a>
+                    <p
+                        style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">
+                        {{ current_user.name }}
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <a href="{{ url_for('auth.change_password') }}"
+                            style="color: var(--text-secondary); text-decoration: none; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; display: flex; align-items: center; gap: 4px;">
+                            <span>🔒</span> Security
+                        </a>
+                        <a href="{{ url_for('auth.logout') }}"
+                            style="color: var(--error-color); text-decoration: none; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; display: flex; align-items: center; gap: 4px;">
+                            <span>👋</span> Sign Out
+                        </a>
+                    </div>
                 </div>
             </div>
         </aside>
-        {% endblock %}
         {% endif %}
 
-        <!-- Main Content -->
         <main class="main-content">
             {% block content %}{% endblock %}
         </main>
     </div>
+
+    <!-- UI/UX Enhancements: Loader & Toasts -->
+    <div id="global-loader" class="global-loader">
+        <div class="loader-spinner"></div>
+    </div>
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(f => {
+                f.addEventListener('submit', () => {
+                    const loader = document.getElementById('global-loader');
+                    if (loader) loader.classList.add('active');
+                });
+            });
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            let icon = 'ℹ️';
+            if (type === 'success') icon = '✅';
+            if (type === 'error') icon = '❌';
+            if (type === 'warning') icon = '⚠️';
+
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <span class="toast-icon">${icon}</span>
+                    <p>${message}</p>
+                </div>
+            `;
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    {% for category, message in messages %}
+                        {% set toast_type = 'success' %}
+                        {% if 'error' in category.lower() or 'invalid' in message.lower() or 'fail' in message.lower() or 'unauthorized' in message.lower() %}
+                            {% set toast_type = 'error' %}
+                        {% endif %}
+                        showToast({{ message|tojson }}, '{{ toast_type }}');
+                    {% endfor %}
+                });
+            </script>
+        {% endif %}
+    {% endwith %}
+    
+    {% block scripts %}{% endblock %}
+    <script>
+        // Service Worker Registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed', err));
+            });
+        }
+    </script>
 </body>
 
 </html>

@@ -1,216 +1,435 @@
 {% extends "base.html" %}
 
-{% block sidebar %}
-<aside class="sidebar">
-    <div class="brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-        </svg>
-        AttendanceML
-    </div>
-
-    <ul class="nav-links">
-        <li class="nav-item">
-            <a href="{{ url_for('main.dashboard') }}">
-                <span>📊</span> Dashboard
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="{{ url_for('main.dashboard_analysis') }}" class="active">
-                <span>📈</span> Overall Analysis
-            </a>
-        </li>
-    </ul>
-
-    <div class="user-profile">
-        <div class="user-avatar">{{ current_user.name[0] | upper }}</div>
-        <div style="flex: 1; overflow: hidden;">
-            <p style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                {{ current_user.name }}
-            </p>
-            <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
-                <div>
-                    <strong>{{ total_classes }}</strong> Classes
-                </div>
-                <div>
-                    <strong>{{ total_students }}</strong> Students
-                </div>
-            </div>
-            <a href="{{ url_for('auth.logout') }}"
-                style="font-size: 0.8rem; color: var(--error-color); text-decoration: none; display: block; margin-top: 0.5rem;">Logout</a>
-        </div>
-    </div>
-</aside>
-{% endblock %}
-
 {% block content %}
 <div class="dashboard-container">
-    <header style="margin-bottom: 2rem;">
-        <h1 style="font-size: 2rem; font-weight: 600;">Global Analysis</h1>
-        <p style="color: var(--text-secondary);">Aggregate statistics across all your classes.</p>
-    </header>
-
-    <!-- Metrics Row -->
-    <div class="dashboard-grid metrics-row">
-        <div class="metric-card green">
-            <div class="metric-title">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-                    </path>
-                </svg>
-                Total Students
+    <div class="dashboard-header animate-fade">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1>Overall Insights</h1>
+                <p>Aggregated attendance analytics across all active classes.</p>
             </div>
-            <div class="metric-value">{{ total_students }}</div>
-            <div class="metric-subtitle">Across {{ total_classes }} Classes</div>
-        </div>
-        <div class="metric-card blue">
-            <div class="metric-title">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Avg Attendance
-            </div>
-            <div class="metric-value">{{ avg_attendance }}%</div>
-            <div class="metric-subtitle">Global Average</div>
-        </div>
-        <div class="metric-card orange">
-            <div class="metric-title">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
-                    </path>
-                </svg>
-                At-Risk Students
-            </div>
-            <div class="metric-value">{{ risk_counts['High'] }}</div>
-            <div class="metric-subtitle">High Risk Level</div>
-        </div>
-        <div class="metric-card red">
-            <div class="metric-title">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Low Attendance
-            </div>
-            <div class="metric-value">{{ low_attendance_count }}</div>
-            <div class="metric-subtitle">Below 75%</div>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="dashboard-grid charts-row">
-        <div class="glass" style="padding: 1.5rem;">
-            <div class="section-header">Attendance Trend (Last 7 Days)</div>
-            <div style="height: 300px; width: 100%;">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
-        <div class="glass" style="padding: 1.5rem;">
-            <div class="section-header">Risk Distribution</div>
-            <div style="height: 300px; width: 100%; display: flex; justify-content: center;">
-                <canvas id="distributionChart"></canvas>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;" class="no-print">
+                <form action="{{ url_for('main.dashboard_analysis') }}" method="GET" style="display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">From</label>
+                        <input type="date" name="start_date" value="{{ request.args.get('start_date', '') }}" class="form-input" style="padding: 4px 8px; font-size: 0.85rem; background: transparent; border: none; color: white;">
+                    </div>
+                    <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.1);"></div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">To</label>
+                        <input type="date" name="end_date" value="{{ request.args.get('end_date', '') }}" class="form-input" style="padding: 4px 8px; font-size: 0.85rem; background: transparent; border: none; color: white;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">Filter</button>
+                </form>
+                <button onclick="window.print()" class="btn btn-secondary">
+                    <span>🖨️</span> Full Report
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Tables Row -->
-    <div class="dashboard-grid tables-row">
-        <div class="glass" style="padding: 1.5rem; grid-column: span 2;">
-            <div class="section-header">Alerts & At-Risk Students</div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>Class</th>
-                        <th>Attendance %</th>
-                        <th>Risk Level</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in at_risk_students %}
-                    <tr>
-                        <td style="font-weight: 500;">{{ student.name }}</td>
-                        <td>{{ student.class_name }}</td>
-                        <td>
-                            <span
-                                style="font-weight: 600; color: {{ '#ef4444' if student.attendance_pct < 75 else '#f59e0b' }}">
-                                {{ student.attendance_pct }}%
-                            </span>
-                        </td>
-                        <td>{{ student.risk_level }}</td>
-                        <td>
-                            {% if student.attendance_pct < 60 %} <span class="status-badge status-absent">
-                                Critical</span>
-                                {% elif student.attendance_pct < 75 %} <span class="status-badge status-warning">
-                                    Warning</span>
-                                    {% else %}
-                                    <span class="status-badge status-warning">Monitor</span>
-                                    {% endif %}
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 2rem;">No
-                            alerts at this time.</td>
-                    </tr>
+    <div class="stats-grid animate-fade" style="margin-bottom: 2rem; animation-delay: 0.1s;">
+        <div class="stat-card">
+            <div class="stat-value">{{ avg_attendance }}%</div>
+            <div class="stat-label">Global Attendance</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ low_attendance_count }}</div>
+            <div class="stat-label">Flagged Globally</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ total_classes }}</div>
+            <div class="stat-label">Active Classes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ total_students }}</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+    </div>
+
+    <div class="grid animate-fade"
+        style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-bottom: 2rem; animation-delay: 0.2s;">
+        <div class="glass-card" style="background: rgba(17, 24, 39, 0.9) !important; min-height: 350px;">
+            <h3 style="margin-bottom: 1.5rem; color: #fff !important;">Class Performance Comparison</h3>
+            <div style="height: 300px; position: relative;">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+        <div class="glass-card" style="background: rgba(17, 24, 39, 0.9) !important; min-height: 350px;">
+            <h3 style="margin-bottom: 1.5rem; color: #fff !important;">Global Risk Profile</h3>
+            <div style="height: 300px; position: relative;">
+                <canvas id="globalRiskChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card animate-fade" style="padding: 0; animation-delay: 0.3s; margin-bottom: 2rem;">
+        <div style="padding: 2rem;">
+            <h3 style="margin-bottom: 0.5rem;">Critical Alerts Portfolio</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">High-risk students across all departments
+                requiring immediate intervention.</p>
+        </div>
+        {% if at_risk_students %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Student & Class</th>
+                    <th>Attendance %</th>
+                    <th>Risk Profile</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in at_risk_students %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 700;">{{ student.name }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ student.class_name }}</div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div
+                                style="flex: 1; max-width: 100px; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                                <div
+                                    style="width: {{ student.attendance_pct }}%; height: 100%; background: {% if student.attendance_pct < 50 %}var(--error-color){% elif student.attendance_pct < 75 %}var(--warning-color){% else %}var(--success-color){% endif %}; transition: width 1s ease;">
+                                </div>
+                            </div>
+                            <span style="font-size: 0.85rem; font-weight: 700;">{{ student.attendance_pct }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if student.risk_level == 'High' %}
+                        <span class="status-badge status-high">⚠️ HIGH</span>
+                        {% elif student.risk_level == 'Medium' %}
+                        <span class="status-badge status-medium">⚡ MODERATE</span>
+                        {% else %}
+                        <span class="status-badge status-low">🛡️ LOW</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('main.student_analysis', student_id=student.id) if student.id else '#' }}"
+                            class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">Profile</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="padding: 4rem 2rem; text-align: center; color: var(--text-secondary);">
+            <div style="
+                        width: 56px; 
+                        height: 56px; 
+                        background: rgba(16, 185, 129, 0.1); 
+                        color: #10b981; 
+                        border-radius: 12px; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        margin: 0 auto 1.5rem auto;
+                    ">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <p style="font-weight: 500;">System Cleared</p>
+            <p style="font-size: 0.85rem; opacity: 0.7;">No critical alerts detected across institutions.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="no-print animate-fade" style="animation-delay: 0.4s; display: flex; flex-direction: column;">
+        <div class="section-header" style="margin-bottom: 1.25rem;">Quick Actions</div>
+        <div class="glass-card" style="padding: 2.25rem; display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <div class="form-group" style="margin: 0;">
+                <label
+                    style="display: block; color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Select Class
+                </label>
+                <select id="quickClassSelect" class="form-input" style="width: 100%; cursor: pointer;">
+                    {% for c in classes %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
                     {% endfor %}
-                </tbody>
-            </table>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+                <label
+                    style="display: block; color: var(--text-secondary); margin-bottom: 0.75rem; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                    Filter History Date
+                </label>
+                <input type="date" id="historyDateInput" class="form-input" style="width: 100%;">
+            </div>
+
+            <button onclick="goToDailyOverview()" class="btn btn-primary"
+                style="width: 100%; justify-content: center; padding: 1.1rem; margin-top: 0.5rem; font-size: 1rem; border-radius: 14px;">
+                <span>Go to Daily Overview</span>
+                <span style="margin-left: 8px;">🗓️</span>
+            </button>
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Distribution Chart
-    const ctxDist = document.getElementById('distributionChart');
-    new Chart(ctxDist, {
-        type: 'doughnut',
-        data: {
-            labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-            datasets: [{
-                data: [{{ risk_counts['Low'] }}, {{ risk_counts['Medium'] }}, {{ risk_counts['High'] }}],
-        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
-        borderWidth: 0
-            }]
-        },
-        options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 20 } }
-        }
-    }
-    });
+    <!-- Official Report Signatures -->
+    <div class="footer print-section"
+        style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); display: none;">
+        <div style="display: flex; justify-content: space-between; padding: 0 2rem; gap: 4rem; flex-wrap: wrap;">
+            <div class="signature-line">
+                <div style="border-top: 1px solid var(--text-secondary); width: 100%; margin-top: 2rem;"></div>
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; opacity: 0.7;">Faculty Signature
+                </div>
+            </div>
+            <div class="signature-line">
+                <div style="border-top: 1px solid var(--text-secondary); width: 100%; margin-top: 2rem;"></div>
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; opacity: 0.7;">Institutional Seal
+                </div>
+            </div>
+            <div class="signature-line">
+                <div style="border-top: 1px solid var(--text-secondary); width: 100%; margin-top: 2rem;"></div>
+                <div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; opacity: 0.7;">Departmental Head
+                </div>
+            </div>
+        </div>
+        <!-- Data for Charts -->
+        <div id="dashboardData" style="display: none;"
+            data-classes-labels='{{ classes_data | map(attribute="name") | list | tojson }}'
+            data-classes-attendance='{{ classes_data | map(attribute="attendance") | list | tojson }}'
+            data-risk-labels='["Low Risk", "Medium Risk", "High Risk"]'
+            data-risk-values='[{{ risk_counts["Low"] }}, {{ risk_counts["Medium"] }}, {{ risk_counts["High"] }}]'
+            data-total-students="{{ total_students }}" data-avg-attendance="{{ avg_attendance }}"
+            data-classes-count="{{ total_classes }}"></div>
+    </div>
+    {% endblock %}
 
-    // Trend Chart (Mock Data for now)
-    const ctxTrend = document.getElementById('trendChart');
-    new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            datasets: [{
-                label: 'Avg Attendance',
-                data: [85, 82, 88, 85, 92, 86, 90], // Mock data
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-            },
-            plugins: { legend: { display: false } }
+    {% block scripts %}
+    <script>
+        // Global references for charts
+        let perfChart = null;
+        let riskChart = null;
+
+        window.goToDailyOverview = function () {
+            const selectEl = document.getElementById('quickClassSelect');
+            const classId = selectEl ? selectEl.value : null;
+            const dateVal = document.getElementById('historyDateInput').value;
+
+            if (classId) {
+                let url = `/class/${classId}/daily`;
+                if (dateVal) url += `?date=${dateVal}`;
+                window.location.href = url;
+            } else {
+                alert('Please select a class first.');
+            }
+        };
+
+        window.exportData = function () {
+            const dataEl = document.getElementById('dashboardData');
+            if (!dataEl) return;
+            const metrics = [
+                ['Metric', 'Value'],
+                ['Total Students', dataEl.dataset.totalStudents],
+                ['Avg Attendance', dataEl.dataset.avgAttendance + '%'],
+                ['Total Classes', dataEl.dataset.classesCount]
+            ];
+            const csv = metrics.map(r => r.join(',')).join('\n');
+            const anonymousBlob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(anonymousBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_summary_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        };
+
+        (function () {
+            const dataEl = document.getElementById('dashboardData');
+            if (!dataEl) return;
+
+            let config = {};
+            try {
+                config = {
+                    classesLabels: JSON.parse(dataEl.dataset.classesLabels || '[]'),
+                    classesAttendance: JSON.parse(dataEl.dataset.classesAttendance || '[]'),
+                    riskLabels: JSON.parse(dataEl.dataset.riskLabels || '[]'),
+                    riskValues: JSON.parse(dataEl.dataset.riskValues || '[]')
+                };
+            } catch (e) {
+                console.error('Error parsing dashboard data:', e);
+                return;
+            }
+
+            if (typeof Chart !== 'undefined') {
+                Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+                Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+                Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+                // Performance Chart
+                const perfCtx = document.getElementById('performanceChart').getContext('2d');
+                perfChart = new Chart(perfCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: config.classesLabels,
+                        datasets: [{
+                            label: 'Attendance %',
+                            data: config.classesAttendance,
+                            backgroundColor: config.classesAttendance.map(v =>
+                                v < 50 ? 'rgba(239, 68, 68, 0.6)' :
+                                    v < 75 ? 'rgba(245, 158, 11, 0.6)' :
+                                        'rgba(16, 185, 129, 0.6)'
+                            ),
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+
+                // Global Risk Chart
+                const riskCtx = document.getElementById('globalRiskChart').getContext('2d');
+                riskChart = new Chart(riskCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: config.riskLabels,
+                        datasets: [{
+                            data: config.riskValues,
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                            borderWidth: 0,
+                            hoverOffset: 20
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                        }
+                    }
+                });
+            }
+
+            const dateInput = document.getElementById('historyDateInput');
+            if (dateInput && !dateInput.value) dateInput.valueAsDate = new Date();
+
+            // Specific print color overrides
+            const setPrintStyles = (isPrint) => {
+                const color = isPrint ? '#000000' : 'rgba(255, 255, 255, 0.7)';
+                [perfChart, riskChart].forEach(chart => {
+                    if (chart && chart.options) {
+                        if (chart.options.scales && chart.options.scales.x) {
+                            chart.options.scales.x.ticks.color = color;
+                        }
+                        if (chart.options.scales && chart.options.scales.y) {
+                            chart.options.scales.y.ticks.color = color;
+                        }
+                        if (chart.options.plugins && chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                            chart.options.plugins.legend.labels.color = color;
+                        }
+                        chart.update('none');
+                    }
+                });
+            };
+
+            window.onbeforeprint = () => setPrintStyles(true);
+            window.onafterprint = () => setPrintStyles(false);
+        })();
+    </script>
+
+    <style>
+        .print-header {
+            display: none;
         }
-    });
-</script>
-{% endblock %}
+
+        .section-header {
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-top: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+
+            .print-header {
+                display: block !important;
+            }
+
+            .print-section {
+                display: block !important;
+            }
+
+            .no-print,
+            .sidebar {
+                display: none !important;
+            }
+
+            .app-container,
+            .main-content,
+            .dashboard-container {
+                grid-template-columns: 1fr !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+
+            html,
+            body {
+                background: white !important;
+                color: black !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+            }
+
+            .glass-card {
+                background: white !important;
+                border: 1px solid #eee !important;
+                box-shadow: none !important;
+                margin-bottom: 1.5rem !important;
+                page-break-inside: avoid;
+                color: black !important;
+            }
+
+            .glass-card h3 {
+                color: black !important;
+                border-bottom: 2px solid #333 !important;
+                padding-bottom: 10px;
+            }
+
+            canvas {
+                max-width: 100% !important;
+                height: 250px !important;
+                background: white !important;
+            }
+
+            .signature-line {
+                flex: 1;
+                color: black !important;
+            }
+
+            .signature-line>div:first-child {
+                border-top: 2px solid black !important;
+            }
+        }
+    </style>
+
+    {% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1>Smart Check-In</h1>
+            <p>Scan the classroom QR code to verify your presence.</p>
+        </div>
+        <div class="glass-card" style="padding: 1rem; border-color: var(--accent-primary);">
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Location</div>
+            <div id="location-status" style="font-weight: 700;">Acquiring GPS...</div>
+        </div>
+    </div>
+</div>
+
+<div class="glass-card animate-fade" style="padding: 2rem; max-width: 600px; margin: 2rem auto; position: relative; overflow: hidden;">
+    <div id="reader-container" style="width: 100%; aspect-ratio: 1/1; background: #000; border-radius: 16px; overflow: hidden; position: relative;">
+        <div id="reader" style="width: 100%;"></div>
+        <div id="scanner-overlay" style="position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10;">
+             <div style="width: 70%; height: 70%; border: 2px solid var(--accent-primary); border-radius: 20px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);"></div>
+             <div class="scan-line" style="position: absolute; width: 70%; height: 2px; background: var(--accent-primary); box-shadow: 0 0 15px var(--accent-primary); animation: scan 2s linear infinite;"></div>
+        </div>
+    </div>
+
+    <!-- OTP Input Form -->
+    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); text-align: center;">
+        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">Scanner not working? Enter the 6-digit PIN displayed on the board.</p>
+        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+            <input type="text" id="pin-input" placeholder="Enter PIN" maxlength="6" 
+                   style="background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); color: white; border-radius: 12px; padding: 1rem; font-size: 1.2rem; font-family: monospace; letter-spacing: 0.2rem; width: 150px; text-align: center;"
+                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <button onclick="submitPin()" class="btn btn-primary" style="padding: 0 1.5rem;">Verify PIN</button>
+        </div>
+    </div>
+
+    <div id="result-overlay" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 20; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem;">
+        <div id="result-icon" style="font-size: 4rem; margin-bottom: 1rem;"></div>
+        <h2 id="result-title" style="margin-bottom: 0.5rem;"></h2>
+        <p id="result-message" style="color: var(--text-secondary); margin-bottom: 2rem;"></p>
+        <button onclick="location.reload()" class="btn btn-primary">Try Again</button>
+    </div>
+</div>
+
+<style>
+@keyframes scan {
+    0% { top: 15%; }
+    100% { top: 85%; }
+}
+#reader video {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 16px !important;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    let currentCoords = null;
+    const locationStatus = document.getElementById('location-status');
+
+    // 1. Start GPS tracking
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                currentCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                locationStatus.innerText = "GPS Fixed";
+                locationStatus.style.color = "var(--success-color)";
+            },
+            (err) => {
+                locationStatus.innerText = "GPS Error";
+                locationStatus.style.color = "var(--error-color)";
+            },
+            { enableHighAccuracy: true }
+        );
+    }
+
+    // 2. Initialize Scanner
+    const html5QrCode = new Html5Qrcode("reader");
+    const qrConfig = { fps: 10, qrbox: { width: 450, height: 450 } };
+
+    html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess);
+
+    async function onScanSuccess(decodedText) {
+        // Pause scanner
+        html5QrCode.pause();
+        
+        try {
+            const response = await fetch('/api/verify_check_in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: decodedText,
+                    lat: currentCoords?.lat,
+                    lon: currentCoords?.lon
+                })
+            });
+            
+            const result = await response.json();
+            showResult(result);
+        } catch (e) {
+            showResult({ error: "Network error. Please try again." });
+        }
+    }
+
+    async function submitPin() {
+        const pin = document.getElementById('pin-input').value;
+        if (pin.length !== 6) {
+            alert("Please enter a valid 6-digit PIN.");
+            return;
+        }
+
+        // Pause scanner if running
+        if(html5QrCode.isScanning) {
+            html5QrCode.pause();
+        }
+
+        try {
+            const response = await fetch('/api/verify_check_in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pin: pin,
+                    lat: currentCoords?.lat,
+                    lon: currentCoords?.lon
+                })
+            });
+            
+            const result = await response.json();
+            showResult(result);
+        } catch (e) {
+            showResult({ error: "Network error. Please try again." });
+        }
+    }
+
+    function showResult(result) {
+        const overlay = document.getElementById('result-overlay');
+        const icon = document.getElementById('result-icon');
+        const title = document.getElementById('result-title');
+        const message = document.getElementById('result-message');
+        
+        overlay.style.display = 'flex';
+        
+        if (result.success || result.message === 'Attendance already marked.') {
+            icon.innerText = "✅";
+            title.innerText = "Verified!";
+            message.innerText = result.message || "Your attendance has been recorded.";
+            message.style.color = "var(--success-color)";
+        } else {
+            icon.innerText = "❌";
+            title.innerText = "Failed";
+            message.innerText = result.error || "Verification failed.";
+            message.style.color = "var(--error-color)";
+        }
+    }
+</script>
+{% endblock %}

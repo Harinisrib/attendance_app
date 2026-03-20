@@ -5,3 +5,6 @@ pandas
 scikit-learn
 numpy
 python-dotenv
+gunicorn
+flask-cors
+pyjwt

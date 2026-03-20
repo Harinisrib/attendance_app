@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-header animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.5rem;">
+                <a href="{{ url_for('main.daily_attendance', class_id=classroom.id, date=date) }}" style="color: var(--accent-primary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">Back to Logs</a>
+                <span style="color: var(--text-secondary);">/</span>
+                <span style="color: var(--text-secondary); font-size: 0.9rem;">Live Session QR</span>
+            </div>
+            <h1>{{ classroom.name }} - {{ sessions | join(', ') }}</h1>
+            <p>Students should scan this code using their Smart Check-In tool.</p>
+        </div>
+        <div class="glass-card" style="padding: 1rem; border-color: var(--accent-primary);">
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Session Date</div>
+            <div style="font-weight: 700;">{{ date }}</div>
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; justify-content: center; align-items: center; padding: 4rem 0;">
+    <div class="glass-card animate-fade" style="padding: 3rem; background: white; display: flex; flex-direction: column; align-items: center; gap: 2rem; border-radius: 24px;">
+        <div id="qrcode" style="padding: 20px; border: 1px solid #eee; border-radius: 12px; background: white; width: 100%; max-width: 300px; display: flex; justify-content: center;"></div>
+        
+        <div style="text-align: center;">
+            <div style="font-weight: 800; font-size: 1.2rem; color: #111827; margin-bottom: 0.5rem;">Scan to Mark Attendance</div>
+            <p style="color: #6b7280; font-size: 0.9rem; max-width: 300px; margin-bottom: 1.5rem;">This code is uniquely signed and expires in 10 minutes for maximum security.</p>
+            
+            <div style="background: #f8fafc; border: 2px dashed #cbd5e1; padding: 1rem 2rem; border-radius: 12px; display: inline-block;">
+                <div style="font-size: 0.8rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem;">Or Enter OTP PIN</div>
+                <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent-primary); letter-spacing: 0.2em; font-family: monospace;">{{ pin }}</div>
+            </div>
+        </div>
+        
+        <div id="countdown" style="font-family: monospace; font-weight: 700; color: var(--accent-primary); font-size: 1.1rem; padding: 0.5rem 1rem; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
+            Token Valid
+        </div>
+    </div>
+</div>
+
+<div class="glass-card animate-fade" style="margin-top: 2rem; border-left: 4px solid var(--warning-color);">
+    <div style="display: flex; gap: 1rem; align-items: flex-start;">
+        <span style="font-size: 1.5rem;">📍</span>
+        <div>
+            <h4 style="margin-bottom: 0.25rem;">GPS Verification Active</h4>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">Students must be within 50 meters of the registered classroom location for the check-in to be successful.</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const token = "{{ token }}";
+        
+        // Initialize QR Code
+        const qrContainer = document.getElementById("qrcode");
+        
+        try {
+            new QRCode(qrContainer, {
+                text: token,
+                width: 256,
+                height: 256,
+                colorDark : "#111827",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M // Changed from H to M to allow larger payload size
+            });
+
+            // Force canvas/img styling within the qrcode container so it is fully visible
+            setTimeout(() => {
+                const qrElement = qrContainer.querySelector("canvas") || qrContainer.querySelector("img");
+                if (qrElement) {
+                    qrElement.style.maxWidth = "100%";
+                    qrElement.style.height = "auto";
+                } else {
+                    console.error("QR Code image/canvas not generated.");
+                    qrContainer.innerHTML = "<div style='color: red; text-align: center;'>QR Code generation failed. Token might be too large.</div>";
+                }
+            }, 100);
+        } catch (e) {
+            console.error("QRCode generation error: ", e);
+            qrContainer.innerHTML = "<div style='color: red; text-align: center;'>Error generating QR: " + e.message + "</div>";
+        }
+    });
+
+    // Simple countdown logic (since we know it's 10 mins from gen)
+    let timeLeft = 600; // 10 minutes
+    const countdownEl = document.getElementById('countdown');
+    
+    const timer = setInterval(() => {
+        timeLeft--;
+        const mins = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        countdownEl.innerText = `Token expires in ${mins}:${secs.toString().padStart(2, '0')}`;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            countdownEl.innerText = "Token Expired. Refresh page.";
+            countdownEl.style.color = "var(--error-color)";
+            document.getElementById('qrcode').style.opacity = "0.2";
+        }
+    }, 1000);
+</script>
+{% endblock %}
