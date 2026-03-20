@@ -9,3 +9,4 @@ gunicorn
 flask-cors
 pyjwt
 flask-mail
+psycopg2-binary
