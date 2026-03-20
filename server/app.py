@@ -14,7 +14,9 @@ def create_app():
     CORS(app)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', app.config['SECRET_KEY'])
-    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'attendance.db')
+    instance_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
+    os.makedirs(instance_dir, exist_ok=True)
+    db_path = os.path.join(instance_dir, 'attendance.db')
     # Use consistent forward slashes for SQLite on Windows
     clean_path = db_path.replace("\\", "/")
     if clean_path.lower().startswith("c:"):
