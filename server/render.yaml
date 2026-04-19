@@ -8,9 +8,7 @@ services:
     startCommand: gunicorn "app:create_app()" -b 0.0.0.0:$PORT
     envVars:
       - key: DATABASE_URI
-        fromDatabase:
-          name: attendance-db
-          property: connectionString
+        value: "postgresql://neondb_owner:npg_qJ9KMC5WXlOy@ep-lingering-breeze-anqvztru.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require"
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: FLASK_APP
@@ -19,7 +17,3 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
-
-databases:
-  - name: attendance-db
-    plan: free
